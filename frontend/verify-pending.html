@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email | AFIT VAS</title>
+    <link rel="stylesheet" href="../../assets/css/main.css">
+</head>
+<body>
+    <div class="auth-wrapper">
+        <div class="auth-card text-center">
+            <div class="auth-logo">AFIT</div>
+            <h2 id="title" style="color:var(--text-main); margin-top:1rem;">Verify Your Email</h2>
+            
+            <div id="loadingState">
+                <p class="text-muted mt-3 mb-4">Please wait while we verify your email address...</p>
+                <div class="spinner spinner-primary"></div>
+            </div>
+
+            <div id="successState" style="display:none;">
+                <div style="font-size:3rem; color:var(--success); margin:1rem 0;">✓</div>
+                <p class="mb-4">Your email has been successfully verified.</p>
+                <a href="login.html" class="btn btn-primary">Proceed to Login</a>
+            </div>
+
+            <div id="errorState" style="display:none;">
+                <div style="font-size:3rem; color:var(--danger); margin:1rem 0;">✗</div>
+                <p id="errorMsg" class="mb-4">Invalid or expired verification link.</p>
+                <a href="login.html" class="btn btn-outline">Go to Login</a>
+            </div>
+            
+            <div id="pendingState" style="display:none;">
+                <div style="font-size:3rem; color:var(--info); margin:1rem 0;">✉</div>
+                <p class="mb-4">We've sent a verification link to your email. Please check your inbox and click the link to verify your account.</p>
+                <a href="login.html" class="btn btn-outline">Go to Login</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../assets/js/api.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+
+        if (token) {
+            // Attempt to verify
+            (async () => {
+                const res = await Api.get('/auth/verify-email', { token });
+                document.getElementById('loadingState').style.display = 'none';
+                
+                if (res.ok) {
+                    document.getElementById('title').textContent = 'Email Verified';
+                    document.getElementById('successState').style.display = 'block';
+                } else {
+                    document.getElementById('title').textContent = 'Verification Failed';
+                    document.getElementById('errorMsg').textContent = res.data.message || 'Verification failed.';
+                    document.getElementById('errorState').style.display = 'block';
+                }
+            })();
+        } else {
+            // Just showing instructions
+            document.getElementById('title').textContent = 'Check Your Email';
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('pendingState').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
