@@ -1,0 +1,79 @@
+name: Deploy AFIT VAS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Run PHPUnit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo_mysql
+          coverage: none
+
+      - name: Install Dependencies
+        working-directory: ./backend
+        run: composer install --prefer-dist --no-progress
+
+      - name: Run Tests
+        working-directory: ./backend
+        run: vendor/bin/phpunit tests/unit/ --testdox
+
+  deploy:
+    name: Rolling Deploy to EC2
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_DEPLOY_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          echo -e "Host *\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
+
+      - name: Deploy to EC2 Instances
+        run: |
+          # Rolling deploy across hosts
+          for HOST in ${{ secrets.EC2_HOSTS }}; do
+            echo "Deploying to $HOST..."
+            
+            # Note: In a real rolling deployment, you would deregister from ALB here,
+            # wait for draining, deploy, then register back to ALB.
+            
+            ssh -i ~/.ssh/deploy_key ${{ secrets.EC2_USER }}@$HOST << 'EOF'
+              cd /var/www/afit-vas
+              git pull origin main
+              cd backend
+              composer install --no-dev --optimize-autoloader
+            EOF
+            
+            echo "Successfully deployed to $HOST."
+          done
+
+      - name: Production Smoke Test
+        run: |
+          echo "Waiting for services to stabilize..."
+          sleep 5
+          
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://${{ secrets.API_DOMAIN }}/api/health)
+          
+          if [ "$HTTP_STATUS" -eq 200 ]; then
+            echo "✓ Health check passed (HTTP 200)"
+            exit 0
+          else
+            echo "✗ Health check failed! Received HTTP $HTTP_STATUS"
+            exit 1
+          fi

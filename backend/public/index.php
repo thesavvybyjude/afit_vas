@@ -12,6 +12,10 @@ header('X-Frame-Options: DENY');
 header('X-XSS-Protection: 1; mode=block');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 
+if (($_ENV['APP_ENV'] ?? 'local') === 'production') {
+    header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+}
+
 // CORS
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 $allowedOrigins = [
