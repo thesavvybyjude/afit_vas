@@ -55,3 +55,12 @@ php -S localhost:3000
 - **Staff Portal:** [http://localhost:3000/admin/login.html](http://localhost:3000/admin/login.html)
   - *Default Admin Email:* `superadmin@afit.edu.ng`
   - *Default Admin Password:* `Password123`
+
+
+## Licence
+
+[MIT](LICENSE)
+
+---
+
+Built by [Jude Thompson](https://github.com/thesavvybyjude)
